@@ -1,0 +1,37 @@
+{
+  "name": "eiev-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "seed": "node prisma/seed.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^4.0.0",
+    "aws-sdk": "^2.1140.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.17.3",
+    "http-errors": "^2.0.0",
+    "json2csv": "^5.0.7",
+    "jsonwebtoken": "^8.5.1",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.4",
+    "nodemon": "^2.0.15",
+    "otp-generator": "^4.0.0",
+    "request": "^2.88.2",
+    "slugify": "^1.6.5"
+  },
+  "devDependencies": {
+    "prisma": "^3.11.1"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
+}

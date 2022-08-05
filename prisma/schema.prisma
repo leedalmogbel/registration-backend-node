@@ -1,0 +1,719 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model events {
+  id                        Int              @id @default(autoincrement())
+  organizerId               Int?
+  name                      String?          @db.VarChar(255)
+  country                   String?          @db.VarChar(255)
+  countryCode               String?          @db.VarChar(255)
+  location                  String?          @db.VarChar(255)
+  description               String?          @db.VarChar(255)
+  slug                      String?          @db.VarChar(255)
+  metadata                  Json?
+  startDate                 DateTime?        @db.DateTime(0)
+  endDate                   DateTime?        @db.DateTime(0)
+  eventImg                  Json?          
+  eventPdf                  Json?          
+  status                    String?          @db.VarChar(255)
+  active                    Boolean?         @db.TinyInt() @default(true)
+  createdAt                 DateTime?        @default(now())
+  updatedAt                 DateTime?        @updatedAt 
+  seasonId                  Int?
+  seasons                   seasons?         @relation(fields: [seasonId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "events_ibfk_1")
+  userId                    Int?
+  users                     users?          @relation(fields: [userId], references: [id])
+  races                     races[]
+
+  @@index([seasonId], map: "seasonId")
+}
+
+model races {
+  id                    Int              @id @default(autoincrement())
+  name                  String?
+  description           String?          @db.VarChar(255)
+  contactPerson         String?          @db.VarChar(255)
+  contactNumber         String?          @db.VarChar(255)
+  startTime             String?
+  isQualifier           Boolean?         @db.TinyInt() @default(false)
+  isIncomplete          Boolean?         @db.TinyInt() @default(false)
+  isLocked              Boolean?         @db.TinyInt() @default(false)
+  isDummy               Boolean?         @db.TinyInt() @default(false)
+  isTest                Boolean?         @db.TinyInt() @default(false)
+  isStaggered           Boolean?         @db.TinyInt() @default(false)
+  pledge                Boolean?         @db.TinyInt() @default(false)
+  subId                 Int?
+  allowedCount          Int?
+  slug                  String?          @db.VarChar(255)
+  metadata              Json?
+  eventDate             DateTime?        @db.DateTime(0)
+  openingDate           DateTime?        @db.DateTime(0)
+  closingDate           DateTime?        @db.DateTime(0)
+  racePdf               Json?
+  raceImg               Json?
+  location              String?          @db.VarChar(255)
+  country               String?          @db.VarChar(255)
+  startDate             DateTime?        @db.DateTime(0)
+  endDate               DateTime?        @db.DateTime(0)
+  status                String?
+  pvtStable             String?
+  sheikhStable          String?
+  raceCategory          String?          @db.VarChar(255) 
+  active                Boolean?         @db.TinyInt() @default(true)
+  notice                Json?
+  eventId               Int?
+  events                events?          @relation(fields: [eventId], references: [id])
+  entries               entries[]
+  createdAt             DateTime?        @default(now())
+  updatedAt             DateTime?        @updatedAt
+}
+
+model entries {
+  id                 Int                  @id @default(autoincrement())
+  eventId            Int?
+  horseId            Int?
+  riderId            Int?
+  userId             Int?
+  raceId             Int?
+  remarks            String?              @db.VarChar(255)
+  status             String?              @db.VarChar(255)
+  active             Boolean?             @db.TinyInt()
+  slug               String?              @db.VarChar(255)
+  metadata           Json?
+  createdAt          DateTime?            @default(now())
+  updatedAt          DateTime?            @updatedAt
+  approvedAt         DateTime?
+  sequence           Int?                 @default(0)
+  horses             horses?              @relation(fields: [horseId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entries_ibfk_2")
+  riders             riders?              @relation(fields: [riderId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entries_ibfk_1")
+  races              races?               @relation(fields: [raceId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entries_ibfk_3")
+  users              users?               @relation(fields: [userId], references: [id])
+  tickets            tickets[]
+
+  @@index([eventId], map: "eventId")
+  @@index([horseId], map: "horseId")
+  @@index([riderId], map: "riderId")
+}
+
+model tickets {
+  id                Int             @id @default(autoincrement())
+  otp               String?
+  createdAt         DateTime?       @default(now())
+  updatedAt         DateTime?       @updatedAt  
+  userId            Int?
+  entriesId         Int?
+  entries           entries?        @relation(fields: [entriesId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
+
+  @@index([entriesId], map: "entriesId")
+}
+
+model horses {
+  id                       Int              @id @default(autoincrement())
+  feiId                    String?          @db.VarChar(255)
+  eefId                    String?          @db.VarChar(255)
+  name                     String?          @db.VarChar(255)
+  originalName             String?          @db.VarChar(255)
+  countryBirth             String?          @db.VarChar(255)
+  breed                    horsesBreed?
+  breeder                  String?          @db.VarChar(255)
+  dob                      DateTime?        @db.Timestamp(0)
+  gender                   String?          @db.VarChar(255)
+  color                    horsesColor?
+  microchipNum             String?          @db.VarChar(255)
+  uelnNo                   String?          @db.VarChar(255)
+  countryResidence         String?          @db.VarChar(255)
+  sire                     String?          @db.VarChar(255)
+  dam                      String?          @db.VarChar(255)
+  sireOfDam                String?          @db.VarChar(255)
+  feiPassportNo            String?          @db.VarChar(255)
+  feiPassportExpiryDate    DateTime?        @db.DateTime(0)
+  feiRegistrationNo        String?          @db.VarChar(255)
+  trainerId                Int?
+  ownerId                  Int?
+  documents                Json?
+  slug                     String?          @db.VarChar(255) @unique
+  metadata                 Json?
+  status                   String?          @db.VarChar(255)
+  active                   Boolean?         @db.TinyInt()
+  remarks                  String?          @db.Text
+  createdAt                DateTime?        @default(now())
+  updatedAt                DateTime?        @updatedAt 
+  owners                   owners?          @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "horses_ibfk_1")
+  trainers                 trainers?        @relation(fields: [trainerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "horses_ibfk_2")
+  entries                  entries[]
+  user                     users            @relation(fields: [userId], references: [id])
+  userId                   Int
+
+  @@index([ownerId], map: "ownerId")
+  @@index([trainerId], map: "trainerId")
+}
+
+model logs {
+  id         Int       @id @default(autoincrement())
+  userId     Int?
+  action     String?   @db.VarChar(255)
+  details    String?   @db.VarChar(255)
+  metadata   Json?
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt 
+}
+
+model owners {
+  id                    Int                @id @default(autoincrement())
+  emiratesId            String?            @db.VarChar(255)
+  discipline            ownersDiscipline?
+  feiRegistrationNo     String?            @db.VarChar(255)
+  feiRegistrationDate   DateTime?          @db.DateTime(0)
+  visa                  ownersVisa?
+  slug                  String?            @db.VarChar(255) @unique
+  gender                String?            @db.VarChar(255)
+  firstName             String?            @db.VarChar(255)
+  lastName              String?            @db.VarChar(255)
+  dob                   DateTime?          @db.DateTime(0)
+  nationality           String?            @db.VarChar(255)
+  uaeAddress            String?            @db.VarChar(255)
+  uaeCity               String?            @db.VarChar(255)
+  uaeCountry            String?            @db.VarChar(255)
+  pobox                 String?            @db.VarChar(255)
+  documents             Json?
+  metadata              Json?
+  contactEmail          String?            @db.VarChar(255)
+  contactTelephone      String?            @db.VarChar(255)
+  contactMobile         String?            @db.VarChar(255)
+  homeAddress           String?            @db.VarChar(255)
+  homeCity              String?            @db.VarChar(255)
+  homeCountry           String?            @db.VarChar(255)
+  contactTelHome        String?            @db.VarChar(255)
+  contactMobHome        String?            @db.VarChar(255)
+  active                Boolean?           @db.TinyInt()
+  status                String?            @db.VarChar(255)
+  remarks               String?            @db.Text
+  horses                horses[]
+  user                  users              @relation(fields: [userId], references: [id])
+  userId                Int
+  createdAt             DateTime?          @default(now())
+  updatedAt             DateTime?          @updatedAt
+}
+
+model riders {
+  id                    Int                @id @default(autoincrement())
+  emiratesId            String?            @db.VarChar(255)
+  discipline            ownersDiscipline?
+  feiRegistrationNo     String?            @db.VarChar(255)
+  feiRegistrationDate   DateTime?          @db.DateTime(0)
+  visa                  ownersVisa?
+  slug                  String?            @db.VarChar(255) @unique
+  gender                String?            @db.VarChar(255)
+  firstName             String?            @db.VarChar(255)
+  lastName              String?            @db.VarChar(255)
+  dob                   DateTime?          @db.DateTime(0)
+  nationality           String?            @db.VarChar(255)
+  uaeAddress            String?            @db.VarChar(255)
+  uaeCity               String?            @db.VarChar(255)
+  uaeCountry            String?            @db.VarChar(255)
+  pobox                 String?            @db.VarChar(255)
+  documents             Json?
+  metadata              Json?
+  contactEmail          String?            @db.VarChar(255)
+  contactTelephone      String?            @db.VarChar(255)
+  contactMobile         String?            @db.VarChar(255)
+  homeAddress           String?            @db.VarChar(255)
+  homeCity              String?            @db.VarChar(255)
+  homeCountry           String?            @db.VarChar(255)
+  contactTelHome        String?            @db.VarChar(255)
+  contactMobHome        String?            @db.VarChar(255)
+  registeredWeight      String?            @db.VarChar(255)
+  riderImage            Json?            
+  active                Boolean?           @db.TinyInt()
+  status                String?            @db.VarChar(255)
+  remarks               String?            @db.Text
+  user                  users              @relation(fields: [userId], references: [id])
+  userId                Int
+  createdAt             DateTime?          @default(now())
+  updatedAt             DateTime?          @updatedAt 
+  entries               entries[]
+}
+
+model seasons {
+  id         Int       @id @default(autoincrement())
+  name       String?   @db.VarChar(255)
+  slug       String?   @db.VarChar(255) @unique
+  metadata   Json?
+  status     String?   @db.VarChar(255)
+  active     Boolean?  @db.TinyInt() @default(true)
+  startDate  DateTime? @db.DateTime(0)
+  endDate    DateTime? @db.DateTime(0)
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt 
+  events     events[]
+}
+
+model stables {
+  id            Int            @id @default(autoincrement())
+  name          String?        @db.VarChar(255)
+  entryCount    Int?           @db.Int() @default(0)
+  active        Boolean?       @db.TinyInt() @default(true)
+  status        String?
+  slug          String?        @db.VarChar(255) @unique
+  eievStableId  String?        @db.VarChar(255)
+  metadata      Json?
+  stableType    String?        @db.VarChar(255)
+  createdAt     DateTime?      @default(now())
+  updatedAt     DateTime?      @updatedAt  
+  users         users?         @relation(fields: [userId], references: [id])
+  userId        Int?           @unique
+
+  @@index([userId], map: "userId")
+}
+
+model trainers {
+  id                    Int                  @id @default(autoincrement())
+  emiratesId            String?              @db.VarChar(255)
+  discipline            trainersDiscipline?
+  feiRegistrationNo     String?              @db.VarChar(255)
+  feiRegistrationDate   DateTime?            @db.DateTime(0)
+  visa                  trainersVisa?
+  slug                  String?              @db.VarChar(255) @unique
+  metadata              Json?
+  gender                String?              @db.VarChar(255)
+  firstName             String?              @db.VarChar(255)
+  lastName              String?              @db.VarChar(255)
+  dob                   DateTime?            @db.DateTime(0)
+  nationality           String?              @db.VarChar(255)
+  uaeAddress            String?              @db.VarChar(255)
+  uaeCity               String?              @db.VarChar(255)
+  uaeCountry            String?              @db.VarChar(255)
+  pobox                 String?              @db.VarChar(255)
+  documents             Json? 
+  contactEmail          String?              @db.VarChar(255)
+  contactTelephone      String?              @db.VarChar(255)
+  contactMobile         String?              @db.VarChar(255)
+  homeAddress           String?              @db.VarChar(255)
+  homeCity              String?              @db.VarChar(255)
+  homeCountry           String?              @db.VarChar(255)
+  contactTelHome        String?              @db.VarChar(255)
+  contactMobHome        String?              @db.VarChar(255)
+  active                Boolean?             @db.TinyInt()
+  status                String?              @db.VarChar(255)
+  remarks               String?              @db.Text
+  createdAt             DateTime?            @default(now())
+  updatedAt             DateTime?            @updatedAt 
+  horses                horses[]
+  user                  users                @relation(fields: [userId], references: [id])
+  userId                Int
+}
+
+model users {
+  id            Int                @id @default(autoincrement())
+  firstName     String?            @db.VarChar(255)
+  lastName      String?            @db.VarChar(255)
+  email         String?            @db.VarChar(255) @unique
+  password      String?            @db.VarChar(255)
+  emiratesId    String?            @db.VarChar(255)
+  dob           DateTime?          @db.DateTime(0)
+  mobile        String?            @db.VarChar(255)
+  discipline    usersDiscipline?
+  status        usersStatus?
+  documents     Json?
+  metadata      Json?
+  active        Boolean?           @db.TinyInt()
+  eievId        String?
+  eefId         String?            @db.VarChar(255)
+  feiId         String?            @db.VarChar(255)
+  stableName    String?
+  location      String?            @db.VarChar(255)
+  nationality   String?            @db.VarChar(255)
+  username      String?            @db.VarChar(255) @unique
+  userType      String?            @db.VarChar(255)
+  accessToken   String?            @db.VarChar(255)
+  refreshToken  String?            @db.VarChar(255)
+  slug          String?            @db.VarChar(255) @unique
+  createdAt     DateTime?          @default(now())
+  updatedAt     DateTime?          @updatedAt 
+  role          roles?             @relation(fields: [roleId], references: [id])
+  roleId        Int?
+  stables       stables?
+  owners        owners[]
+  trainers      trainers[]
+  riders        riders[]
+  horses        horses[]
+  events        events[]
+  entries       entries[]
+}
+
+model roles {
+  id          Int          @id @default(autoincrement())
+  name        String?      @db.VarChar(255)
+  active      Boolean?     @db.TinyInt()
+  slug        String?      @db.VarChar(255) @unique
+  users       users[]
+  permissions permissions?
+  createdAt   DateTime?    @default(now())
+  updatedAt   DateTime?    @updatedAt 
+}
+
+model permissions {
+  id          Int          @id @default(autoincrement())
+  actions     Json?        @db.Json
+  active      Boolean?     @db.TinyInt()
+  roleId      Int?         @unique // 1 to 1 relationship with roles
+  role        roles?       @relation(fields: [roleId], references: [id])
+  createdAt   DateTime?    @default(now())
+  updatedAt   DateTime?    @updatedAt 
+}
+
+model otp {
+  id        Int          @id @default(autoincrement())
+  otp       String?      @db.VarChar(255)
+  userId    String?      @db.VarChar(50)
+  expiresAt DateTime?    @db.Timestamp(0)
+  createdAt DateTime?    @default(now())
+  updatedAt DateTime?    @updatedAt
+}
+
+enum horsesBreed {
+  arabian
+  part_arab
+  crossbreed
+}
+
+enum horsesColor {
+  Bay
+  Black
+  Brown
+  Chestnut
+  Grey
+  Pinto_Pie
+  Roan
+  Spotted
+  Dark_Bay
+  Grey_Roan
+  Dunn
+  Dark_Bay_or_Brown
+  Unknown
+  Steel_Grey
+  Chesnut_Grey
+  Red_Dun
+  Silver
+  Isabell
+  Dark_Brown
+  Grey_Dappie
+  Piebald
+  Other
+  BLUE_ROAN
+  PIEABALD
+  DUN
+  SKEWBALD
+  Flea_Bitten_Grey
+  White
+  Palamino
+  Buckskin
+  Appaloosa_Leopard
+  Painted
+}
+
+// enum hourseCountry {
+// 'Unknown',
+// 'United States',
+// 'Canada',
+// 'Afghanistan',
+// 'Albania',
+// 'Algeria',
+// 'American Samoa',
+// 'Andorra',
+// 'Angola',
+// 'Anguilla',
+// 'Antarctica',
+// 'Antigua and/or Barbuda',
+// 'Argentina',
+// 'Armenia',
+// 'Aruba',
+// 'Australia',
+// 'Austria',
+// 'Azerbaijan',
+// 'Bahamas',
+// 'Bahrain',
+// 'Bangladesh',
+// 'Barbados',
+// 'Belarus',
+// 'Belgium',
+// 'Belize',
+// 'Benin',
+// 'Bermuda',
+// 'Bhutan',
+// 'Bolivia',
+// 'Bosnia and Herzegovina',
+// 'Botswana',
+// 'Bouvet Island',
+// 'Brazil',
+// 'British lndian Ocean Territory',
+// 'Brunei Darussalam',
+// 'Bulgaria',
+// 'Burkina Faso',
+// 'Burundi',
+// 'Cambodia',
+// 'Cameroon',
+// 'Cape Verde',
+// 'Cayman Islands',
+// 'Central African Republic',
+// 'Chad',
+// 'Chile',
+// 'China',
+// 'Christmas Island',
+// 'Cocos (Keeling) Islands',
+// 'Colombia',
+// 'Comoros',
+// 'Congo',
+// 'Cook Islands',
+// 'Costa Rica',
+// 'Croatia (Hrvatska)',
+// 'Cuba',
+// 'Cyprus',
+// 'Czech Republic',
+// 'Denmark',
+// 'Djibouti',
+// 'Dominica',
+// 'Dominican Republic',
+// 'East Timor',
+// 'Ecuador',
+// 'Egypt',
+// 'El Salvador',
+// 'Equatorial Guinea',
+// 'Eritrea',
+// 'Estonia',
+// 'Ethiopia',
+// 'Falkland Islands (Malvinas)',
+// 'Faroe Islands',
+// 'Fiji',
+// 'Finland',
+// 'France',
+// 'France, Metropolitan',
+// 'French Guiana',
+// 'French Polynesia',
+// 'French Southern Territories',
+// 'Gabon',
+// 'Gambia',
+// 'Georgia',
+// 'Germany',
+// 'Ghana',
+// 'Gibraltar',
+// 'Greece',
+// 'Greenland',
+// 'Grenada',
+// 'Guadeloupe',
+// 'Guam',
+// 'Guatemala',
+// 'Guinea',
+// 'Guinea-Bissau',
+// 'Guyana',
+// 'Haiti',
+// 'Heard and Mc Donald Islands',
+// 'Honduras',
+// 'Hong Kong',
+// 'Hungary',
+// 'Iceland',
+// 'India',
+// 'Indonesia',
+// 'Iran (Islamic Republic of)',
+// 'Iraq',
+// 'Ireland',
+// 'Israel',
+// 'Italy',
+// 'Ivory Coast',
+// 'Jamaica',
+// 'Japan',
+// 'Jordan',
+// 'Kazakhstan',
+// 'Kenya',
+// 'Kiribati',
+// 'Korea, Democratic People's Republic of',
+// 'Korea, Republic of',
+// 'Kuwait',
+// 'Kyrgyzstan',
+// 'Lao People's Democratic Republic',
+// 'Latvia',
+// 'Lebanon',
+// 'Lesotho',
+// 'Liberia',
+// 'Libyan Arab Jamahiriya',
+// 'Liechtenstein',
+// 'Lithuania',
+// 'Luxembourg',
+// 'Macau',
+// 'Macedonia',
+// 'Madagascar',
+// 'Malawi',
+// 'Malaysia',
+// 'Maldives',
+// 'Mali',
+// 'Malta',
+// 'Marshall Islands',
+// 'Martinique',
+// 'Mauritania',
+// 'Mauritius',
+// 'Mayotte',
+// 'Mexico',
+// 'Micronesia, Federated States of',
+// 'Moldova, Republic of',
+// 'Monaco',
+// 'Mongolia',
+// 'Montserrat',
+// 'Morocco',
+// 'Mozambique',
+// 'Myanmar',
+// 'Namibia',
+// 'Nauru',
+// 'Nepal',
+// 'Netherlands',
+// 'Netherlands Antilles',
+// 'New Caledonia',
+// 'New Zealand',
+// 'Nicaragua',
+// 'Niger',
+// 'Nigeria',
+// 'Niue',
+// 'Norfork Island',
+// 'Northern Mariana Islands',
+// 'Norway',
+// 'Oman',
+// 'Pakistan',
+// 'Palau',
+// 'Panama',
+// 'Papua New Guinea',
+// 'Paraguay',
+// 'Peru',
+// 'Philippines',
+// 'Pitcairn',
+// 'Poland',
+// 'Portugal',
+// 'Puerto Rico',
+// 'Qatar',
+// 'Reunion',
+// 'Romania',
+// 'Russian Federation',
+// 'Rwanda',
+// 'Saint Kitts and Nevis',
+// 'Saint Lucia',
+// 'Saint Vincent and the Grenadines',
+// 'Samoa',
+// 'San Marino',
+// 'Sao Tome and Principe',
+// 'Saudi Arabia',
+// 'Senegal',
+// 'Seychelles',
+// 'Sierra Leone',
+// 'Singapore',
+// 'Slovakia',
+// 'Slovenia',
+// 'Solomon Islands',
+// 'Somalia',
+// 'South Africa',
+// 'South Georgia South Sandwich Islands',
+// 'Spain',
+// 'Sri Lanka',
+// 'St. Helena',
+// 'St. Pierre and Miquelon',
+// 'Sudan',
+// 'Suriname',
+// 'Svalbarn and Jan Mayen Islands',
+// 'Swaziland',
+// 'Sweden',
+// 'Switzerland',
+// 'Syrian Arab Republic',
+// 'Taiwan',
+// 'Tajikistan',
+// 'Tanzania, United Republic of',
+// 'Thailand',
+// 'Togo',
+// 'Tokelau',
+// 'Tonga',
+// 'Trinidad and Tobago',
+// 'Tunisia',
+// 'Turkey',
+// 'Turkmenistan',
+// 'Turks and Caicos Islands',
+// 'Tuvalu',
+// 'Uganda',
+// 'Ukraine',
+// 'United Arab Emirates',
+// 'United Kingdom',
+// 'United States minor outlying islands',
+// 'Uruguay',
+// 'Uzbekistan',
+// 'Vanuatu',
+// 'Vatican City State',
+// 'Venezuela',
+// 'Vietnam',
+// 'Virigan Islands (British)',
+// 'Virgin Islands (U.S.)',
+// 'Wallis and Futuna Islands',
+// 'Western Sahara',
+// 'Yemen',
+// 'Yugoslavia',
+// 'Zaire',
+// 'Zambia',
+// 'Zimbabwe',
+// 'Palestine',
+// 'Serbia',
+// 'Libya',
+// 'Chinese Taipe',
+// }
+
+enum ownersDiscipline {
+  endurance
+  dressage
+  flat
+  jumping
+}
+
+enum ownersVisa {
+  resident
+  tourist
+  citizen
+}
+
+enum ridersDiscipline {
+  endurance
+  dressage
+  flat
+  jumping
+}
+
+enum ridersVisa {
+  resident
+  tourist
+  citizen
+}
+
+enum trainersDiscipline {
+  endurance
+  dressage
+  flat
+  jumping
+}
+
+enum trainersVisa {
+  resident
+  tourist
+  citizen
+}
+
+enum usersDiscipline {
+  endurance
+  dressage
+  flat
+  jumping
+}
+
+enum usersStatus {
+  pending
+  rejected
+  approved
+  suspended
+}
