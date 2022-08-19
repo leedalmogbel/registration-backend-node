@@ -1,5 +1,6 @@
 const prisma = require("../utils/prisma");
 require("dotenv").config();
+const moment = require("moment");
 
 const createError = require("http-errors");
 
@@ -151,6 +152,48 @@ class raceService {
       return race;
     } catch (error) {
       console.log(error);
+    }
+  }
+
+  static async fetchRacesForKiosk(params) {
+    try {
+      let filter = {};
+        filter = {
+          status: 'approved',
+          active: true,
+        };
+
+      let count = await prisma.races.count({
+        where: {
+          ...filter,
+        },
+      });
+
+      let allraces = await prisma.races.findMany({
+        where: {
+          ...filter,
+        }
+      });
+
+      let _races = allraces.map((race) => {
+        const eventDate = moment(race.eventDate).format('MMMM D, YYYY'); 
+        const startTime = moment(race.eventDate).format('hh:mm:ss a')
+
+        return {
+          id: race.id,
+          name: race.name,
+          location: race.location,
+          raceImg: race.raceImg ? race.raceImg:{},
+          eventDate: eventDate,
+          startTime: startTime,
+        }
+      })
+
+      console.log(_races)
+
+      return { data: _races, count };
+    } catch (error) {
+      console.log("error", error);
     }
   }
 }

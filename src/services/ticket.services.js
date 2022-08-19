@@ -2,21 +2,29 @@ const prisma = require('../utils/prisma');
 require('dotenv').config();
 
 const otpGenerator = require('otp-generator');
+const { generateQR } = require('../utils/helpers');
 
 class ticketService {
     static async create(params) {
         try {
-            const { status } = params;
+            // const { status } = params;
             let otp = '';
-            if (status === 'approved') {
+            // if (status === 'approved') {
                 otp = otpGenerator.generate(10, {
                     digits: true,
                     lowerCaseAlphabets: false,
                     upperCaseAlphabets: false,
                     specialChars: false,
                 });
-            }
+            // }
 
+            const otpExist = await prisma.tickets.findFirst({
+                where: {
+                    qrCodeOtp: otp
+                }
+            });
+
+            // const { dir, }
             let data = {};
             data = {
                 otp,

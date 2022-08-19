@@ -277,19 +277,25 @@ class userService {
         };
       }
 
-      const [users, owners, trainers, riders, horses] = await Promise.all([
+      const [users, owners, trainers, riders, horses, notifications] = await Promise.all([
         await prisma.users.count({}),
         await prisma.owners.count({ where: { ...filter } }),
         await prisma.trainers.count({ where: { ...filter } }),
         await prisma.riders.count({ where: { ...filter } }),
         await prisma.horses.count({ where: { ...filter } }),
+        await prisma.notifications.groupBy({ 
+          by: ['type'],
+          where: { senderId: parseInt(params.id) }})
       ]);
+      console.log('where', filter)
+      console.log('notifications', notifications)
       return {
         users,
         owners,
         trainers,
         riders,
         horses,
+        notifications
       };
     } catch (error) {
       console.log("THIS!!!", error);

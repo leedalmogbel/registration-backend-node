@@ -40,6 +40,9 @@ router.post("/", upload.fields([{
 // fetch all
 router.get("/", race.list);
 
+// fetch race on kiosk
+router.get('/kiosk', race.showRaceOnKiosk);
+
 // fetch by parameter
 router.get("/:id", race.show);
 

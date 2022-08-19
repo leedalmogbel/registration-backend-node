@@ -39,17 +39,22 @@ router.post("/", upload.fields([{
 // fetch all
 router.get('/', entry.list);
 
+// fetch entries on kiosk
+router.get('/kiosk/:raceId', entry.showRaceEntriesOnKiosk);
 // fetch by parameter
 router.get("/manage", entry.manage);
 
 // fetch by parameter
 router.get("/:id", entry.show);
 
-
 // update
 router.patch("/:id/status", entry.updateStatus);
 router.patch("/:id/save", entry.updateList);
 
 router.get("/:id/export", entry.export);
+
+// send otp to account
+router.post('/:entryId/otp', entry.sendOtp);
+router.get('/:otp/otp', entry.verifyOtp);
 
 module.exports = router

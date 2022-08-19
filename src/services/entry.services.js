@@ -1,7 +1,11 @@
 const prisma = require("../utils/prisma");
 require("dotenv").config();
-
+const otpGenerator = require('otp-generator');
 const createError = require("http-errors");
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+const twilioClient = require('twilio')(accountSid, authToken);
 
 class entryService {
   static async create(payload) {
@@ -185,6 +189,8 @@ console.log(_entry)
         },
       });
 
+      console.log('ent11ry', entry)
+
       return entry;
     } catch (error) {
       console.log(error);
@@ -359,6 +365,132 @@ console.log(_entry)
       return allEntries;
     } catch (error) {
       console.log("error", error);
+    }
+  }
+
+  static async getEntriesByRaceId(raceId) {
+    try {
+      let filter = {};
+      
+      const allEntries = await prisma.entries.findMany({
+        where: {
+          raceId: raceId,
+        },
+        orderBy: {
+          sequence: 'asc'
+        },
+        include: {
+          users: {
+            include: {
+              stables: true,
+            }
+          },
+          horses: true,
+          riders: true,
+          races: {
+            include: {
+              events: true
+            }
+          }
+        }
+      });
+
+      let _entries = allEntries.map((entry) => {
+        return {
+          id: entry.id,
+          startNumber: entry.sequence,
+          horseName: entry.horses.name,
+          horseEef: entry.horses.eefId || '',
+          horseFei: entry.horses.feiId || '',
+          riderName: `${entry.riders.firstName} ${entry.riders.lastName}`,
+          riderEef: entry.riders.eefId || '',
+          riderFei: entry.riders.feiId || '',
+          mobileNumber: entry.users.mobile || '',
+        }
+      });
+
+      return _entries;
+    } catch (error) {
+      console.log("error", error);
+    }
+  }
+
+  static async saveOtp (entryId) {
+    try {
+      let otp = '';
+      otp = otpGenerator.generate(10, {
+          digits: true,
+          lowerCaseAlphabets: false,
+          upperCaseAlphabets: false,
+          specialChars: false,
+      });
+
+      const otpExist = await prisma.otp.findFirst({
+          where: {
+            otp
+          }
+      });
+console.log(otpExist) // TODO: validation on otpExist
+      const detail = await prisma.entries.findFirst({
+        where: {
+          id: entryId,
+        },
+        include: {
+          users: true,
+        }
+      });
+
+      let data = {
+        otp,
+        mobile: detail.users.mobile || '' ,
+        type: 'kiosk'
+      }
+      const results = await prisma.otp.create({
+          data
+      })
+      // TODO: setup queue job for sending otp for mobile user
+      twilioClient.messages 
+        .create({   
+          body: `Kiosk OTP is ${otp} `,
+          messagingServiceSid: 'MG2b9dc718783a336cae6b16c6097a6be6',      
+          to: `${detail.users.mobile}` 
+        }) 
+        .then(message => console.log(message.sid))
+        .catch((error) => { console.log(`error twilio otp ${error}`)})
+        .done();
+  
+      return results;
+    } catch (error) {
+      console.log("error", error);
+      throw new Error(error.message, 400);
+    }
+  }
+
+  static async verifyEntryOtp(otp) {
+    try {
+      const verified = await prisma.otp.findFirst({
+        where: {
+          otp
+        }
+      })
+
+      if (!verified) {
+        throw new Error('Invalid OTP', 400);
+      }
+
+      const qqq = await prisma.otp.update({
+        where: {
+          id: verified.id
+        },
+        data: {
+          isExpired: true,
+        },
+      });
+
+      console.log('verified', qqq)
+      return verified;
+    } catch (error) {
+      console.log(error)
     }
   }
 }

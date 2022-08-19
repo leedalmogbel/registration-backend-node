@@ -2,7 +2,7 @@ const entry = require("../services/entry.services");
 const ticket = require('../services/ticket.services');
 const { Parser } = require('json2csv');
 const createError = require("http-errors");
-const { ip } = require("../utils/helpers");
+const { ip, generateQR } = require("../utils/helpers");
 
 class entryController {
   static store = async (req, res, next) => {
@@ -105,7 +105,7 @@ class entryController {
       const { id } = req.params;
       const status = req.body.status;
       const raceId = req.body.raceId;
-      console.log(req.body)
+      console.log('start')
       const params = {
         status,
         raceId
@@ -113,6 +113,12 @@ class entryController {
 
       const data = await entry.updateStatus(parseInt(id), params);
 
+
+    generateQR(data)
+// QRCode.toDataURL([data], function (err, url) {
+//   if (err) throw err;
+//   console.log(url)
+// })
       // // console.log('entry approved', data)
       // // const detail = await ticket.create(data);
       res.status(200).json({
@@ -172,6 +178,50 @@ class entryController {
       res.set('Content-Disposition', ["attachment; filename=", filename, '.csv'].join(''))
       res.status(200).send(Buffer.from(csv));
     } catch (error) {}
+  };
+
+  static showRaceEntriesOnKiosk = async (req, res, next) => {
+    try {
+      const { raceId } = req.params;
+      console.log('raceda', raceId)
+      const data = await entry.getEntriesByRaceId(parseInt(raceId));
+      res.status(200).json({
+        status: "Ok",
+        message: "Fetch Entries",
+        data,
+      });
+    } catch (error) {
+      
+    }
+  };
+
+  static sendOtp = async (req, res, next) => {
+    try {
+      const { entryId } = req.params;
+      console.log(req.params);
+      const data = await entry.saveOtp(parseInt(entryId));
+      // TODO: setup queue job for sending otp for mobile user
+      res.status(200).json({
+        status: "Ok",
+        message: "OTP sent",
+        data: {
+          otp: data.otp
+        }
+      });
+    } catch (error) {
+      console.log(error)
+    }
+  };
+
+  static verifyOtp = async (req, res, next) => {
+    try {
+      const { otp } = req.params;
+      console.log('otp', otp)
+      const data = await entry.verifyEntryOtp(otp);
+      
+    } catch (error) {
+      console.log(error)
+    }
   };
 }
 

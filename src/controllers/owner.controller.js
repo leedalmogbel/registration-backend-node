@@ -8,6 +8,8 @@ class ownerController {
       let { data } = req.body;
       data = JSON.parse(data);
 
+      console.log(data)
+
       const { documentExpiry, ...rest } = data;
       const file = req.file || {};
 

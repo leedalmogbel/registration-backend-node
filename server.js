@@ -23,6 +23,26 @@ app.get('/', (req, res) => {
 })
 
 /**
+ * Twilio SMS test
+ */
+
+// app.post('/sms', (req, res) => {
+//   const { message, user:sender, type, members } = req.body;
+//   console.log('type', type)
+//   // if (type === 'message.new')
+//   twilioClient.messages 
+//       .create({   
+//          body: `Kiosk OTP is 111111`,
+//          messagingServiceSid: 'MG2b9dc718783a336cae6b16c6097a6be6',      
+//          to: '+971589525878' 
+//        }) 
+//       .then(message => console.log(message.sid))
+//       .catch((error) => { console.log(`error twilio otp ${error}`)})
+//       .done();
+//   return res.status(200).json({ message: 'sms sent'});
+// });
+
+/**
  * ROUTER HANDLER
  */
 const route = require('./src/routes');

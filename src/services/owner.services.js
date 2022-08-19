@@ -1,4 +1,5 @@
 const prisma = require("../utils/prisma");
+const notification = require('../services/notification.services');
 require("dotenv").config();
 
 const createError = require("http-errors");
@@ -14,6 +15,22 @@ class ownerService {
       const owner = await prisma.owners.create({
         data,
       });
+
+      const user = await prisma.users.findFirst({
+        where: {
+          id: data.userId
+        }
+      });
+
+      if (user.userType === "User") {
+        const notif = await notification.create({
+          userId: 1, //response.userId,
+          senderId: user.id,
+          message: `User {${user.id}} has been created`,
+          type: "owner",
+          senderType: user.userType,
+        });
+      }
 
       return owner;
     } catch (error) {

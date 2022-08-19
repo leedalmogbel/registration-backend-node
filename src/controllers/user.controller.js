@@ -33,12 +33,12 @@ class userController {
       };
       console.log("ip", ip);
 
-      const response = await user.register(data);
-      res.status(200).json({
-        status: true,
-        message: "User Created successfully",
-        data: response,
-      });
+      // const response = await user.register(data);
+      // res.status(200).json({
+      //   status: true,
+      //   message: "User Created successfully",
+      //   data: response,
+      // });
     } catch (err) {
       console.log(err);
       res.status(404).json({

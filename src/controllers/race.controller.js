@@ -175,6 +175,22 @@ class raceController {
       next(createError(error.statusCode, error.message));
     }
   };
+
+  static showRaceOnKiosk = async (req, res, next) => {
+    try {
+        const params = req.query;
+  
+        const { data, count } = await race.fetchRacesForKiosk(params);
+        res.status(200).json({
+          status: "success",
+          data,
+          count,
+        });
+    } catch (error) {
+      console.log("error", error);
+      next(createError(error.statusCode, error.message));
+    }
+  };
 }
 
 module.exports = raceController;

@@ -34,6 +34,23 @@ model events {
   @@index([seasonId], map: "seasonId")
 }
 
+model notifications {
+  id          Int       @id @default(autoincrement())
+  // receiverId  Int?
+  senderId    Int?
+  senderType  String?
+  url         String?
+  message     String? // Read, Unread, seen??
+  status      String?
+  readAt      String?
+  type        String?
+  isRead      Boolean?  @default(false)
+  createdAt   DateTime? @default(now())
+  updatedAt   DateTime? @updatedAt
+  user        users     @relation(fields: [userId], references: [id])
+  userId      Int
+}
+
 model races {
   id                    Int              @id @default(autoincrement())
   name                  String?
@@ -103,10 +120,14 @@ model entries {
 
 model tickets {
   id                Int             @id @default(autoincrement())
-  otp               String?
+  qrCodeOtp         String?
+  qrCodePng         String?
+  qrCodeUrl         String?
+  uuidQr            String?
   createdAt         DateTime?       @default(now())
   updatedAt         DateTime?       @updatedAt  
   userId            Int?
+  users             users?          @relation(fields: [userId], references: [id])
   entriesId         Int?
   entries           entries?        @relation(fields: [entriesId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
 
@@ -345,6 +366,8 @@ model users {
   horses        horses[]
   events        events[]
   entries       entries[]
+  tickets       tickets[]
+  notifications notifications[]
 }
 
 model roles {
@@ -370,8 +393,10 @@ model permissions {
 
 model otp {
   id        Int          @id @default(autoincrement())
-  otp       String?      @db.VarChar(255)
-  userId    String?      @db.VarChar(50)
+  otp       String?      @db.VarChar(50)
+  mobile    String?      @db.VarChar(50)
+  isExpired Boolean?     @db.TinyInt() @default(false)
+  type      String?      @db.VarChar(50)
   expiresAt DateTime?    @db.Timestamp(0)
   createdAt DateTime?    @default(now())
   updatedAt DateTime?    @updatedAt

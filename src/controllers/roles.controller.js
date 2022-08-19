@@ -26,6 +26,7 @@ class rolesController {
         data: data
       })
     } catch (err) {
+      console.log(err)
       next(createError(err.statusCode, err.message))
     }
   };
