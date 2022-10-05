@@ -11,15 +11,25 @@ const roles = [
   },
 ];
 
+const seasons = [
+  {
+    name: 'season 2022 - 2023',
+    startDate: '2022-07-20 07:20:08.237',
+    endDate: '2023-12-12 00:00:00'
+    active: true,
+  }
+];
+
 const permissions = [
   {
     id: 1,
     actions: {
-      users: ['create', 'update', 'view', 'delete'],
-      owners: ['create', 'update', 'view', 'delete'],
-      horses: ['create', 'update', 'view', 'delete'],
-      trainers: ['create', 'update', 'view', 'delete'],
-      riders: ['create', 'update', 'view', 'delete'],
+      users: ['create', 'update', 'view', 'delete', 'approved', 'rejected'],
+      owners: ['create', 'update', 'view', 'delete', 'approved', 'rejected'],
+      horses: ['create', 'update', 'view', 'delete', 'approved', 'rejected'],
+      trainers: ['create', 'update', 'view', 'delete', 'approved', 'rejected'],
+      riders: ['create', 'update', 'view', 'delete', 'approved', 'rejected'],
+      races: ['create', 'update', 'view', 'delete', 'approved', 'rejected']
     },
     roleId: 1,
   },
@@ -123,4 +133,62 @@ const users = [
   },
 ];
 
-module.exports = { roles, permissions, users };
+const stables = [
+  {
+    name: 'Al Wathba Stable',
+    entryCount: null,
+    active: true,
+    status: 'pending',
+    slug: null,
+    eievStableId: null,
+    metadata: {},
+    stableType: 'pvt',
+    userId: 1
+  },
+  {
+    name: 'Al Reef Stable',
+    entryCount: null,
+    active: true,
+    status: 'pending',
+    slug: null,
+    eievStableId: null,
+    metadata: {},
+    stableType: 'pvt',
+    userId: 2
+  },
+  {
+    name: 'Al Maghaweer Stable',
+    entryCount: null,
+    active: true,
+    status: 'pending',
+    slug: null,
+    eievStableId: null,
+    metadata: {},
+    stableType: 'pvt',
+    userId: 2
+  },
+  {
+    name: 'Al Maghaweer Stable',
+    entryCount: null,
+    active: true,
+    status: 'pending',
+    slug: null,
+    eievStableId: null,
+    metadata: {},
+    stableType: 'pvt',
+    userId: 2
+  },
+  {
+    name: 'Al Widjan Stable',
+    entryCount: null,
+    active: true,
+    status: 'pending',
+    slug: null,
+    eievStableId: null,
+    metadata: {},
+    stableType: 'sheikh',
+    userId: 3
+  },
+];
+
+module.exports = { roles, permissions, users, seasons, stables };

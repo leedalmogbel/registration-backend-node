@@ -51,7 +51,8 @@ router.get("/:id", entry.show);
 router.patch("/:id/status", entry.updateStatus);
 router.patch("/:id/save", entry.updateList);
 
-router.get("/:id/export", entry.export);
+router.get("/:id/:type/exportPdf", entry.exportPdf);
+router.get("/:id/:type/exportXls", entry.exportExcel);
 
 // send otp to account
 router.post('/:entryId/otp', entry.sendOtp);

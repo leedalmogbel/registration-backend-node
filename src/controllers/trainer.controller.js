@@ -46,7 +46,6 @@ class trainerController {
         });
       } else {
         const params = req.query;
-        console.log('tae', req.query)
 
         const { data, count } = await trainer.fetchAll(params);
         res.status(200).json({

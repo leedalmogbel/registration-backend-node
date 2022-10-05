@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const { roles, permissions, users } = require('./data.js');
+const { roles, permissions, users, seasons, stables } = require('./data.js');
 const prisma = new PrismaClient();
 
 const load = async () => {
@@ -15,6 +15,16 @@ const load = async () => {
       data: users,
     });
     console.log('Users are created');
+
+    await prisma.seasons.createMany({
+      data: seasons,
+    });
+    console.log('Seasons are created');
+
+    await prisma.stables.createMany({
+      data: stables,
+    });
+    console.log('Stables are created');
   } catch (error) {
     console.log(error);
   } finally {

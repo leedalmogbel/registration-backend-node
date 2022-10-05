@@ -40,10 +40,11 @@ model notifications {
   senderId    Int?
   senderType  String?
   url         String?
-  message     String? // Read, Unread, seen??
+  message     String?  // Read, Unread, seen??
   status      String?
   readAt      String?
   type        String?
+  entityId    Int?      // table field id for checking
   isRead      Boolean?  @default(false)
   createdAt   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
@@ -81,6 +82,7 @@ model races {
   status                String?
   pvtStable             String?
   sheikhStable          String?
+  raceCode              String?
   raceCategory          String?          @db.VarChar(255) 
   active                Boolean?         @db.TinyInt() @default(true)
   notice                Json?
@@ -251,6 +253,8 @@ model riders {
   contactMobHome        String?            @db.VarChar(255)
   registeredWeight      String?            @db.VarChar(255)
   riderImage            Json?            
+  feiId                 String?            @db.VarChar(255)
+  eefId                 String?            @db.VarChar(255)
   active                Boolean?           @db.TinyInt()
   status                String?            @db.VarChar(255)
   remarks               String?            @db.Text

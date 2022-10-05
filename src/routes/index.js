@@ -12,6 +12,7 @@ const eventRoutes = require("./event.routes");
 const raceRoutes = require("./race.routes");
 const entryRoutes = require("./entry.routes");
 const ticketRoutes = require("./ticket.routes");
+const notificationRoutes = require("./notification.routes");
 
 // const authRoutes = require('./auth.route');
 
@@ -40,5 +41,6 @@ router.use("/events", eventRoutes);
 router.use("/races", raceRoutes);
 router.use("/entries", entryRoutes);
 router.use("/tickets", ticketRoutes);
+router.use("/notify", notificationRoutes);
 
 module.exports = router;

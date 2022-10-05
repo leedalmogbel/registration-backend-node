@@ -1,5 +1,5 @@
 const prisma = require("../utils/prisma");
-const notification = require('../services/notification.services');
+const notifications = require('../services/notification.services');
 require("dotenv").config();
 
 const createError = require("http-errors");
@@ -41,7 +41,7 @@ class ownerService {
   static async fetchAll(params) {
     try {
       let filter = {};
-      if ("id" in params) {
+      if ("id" in params && params.id > 1) {
         filter = {
           userId: parseInt(params.id),
         };
@@ -199,7 +199,10 @@ class ownerService {
           status,
         },
       });
+console.log('entityId', id)
+      const updateNotif = await notifications.updateNotification({id})
 
+console.log('updateNotif', updateNotif)
       return owner;
     } catch (error) {
       console.log(error);

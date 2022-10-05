@@ -21,7 +21,7 @@ class ownerController {
           filePath: `http://${ip}:7331/${file.path}`,
         },
       };
-
+console.log(';', data)
       const response = await owner.create(data);
 
       res.status(200).json({

@@ -25,7 +25,7 @@ class trainerService {
   static async fetchAll(params) {
     try {
       let filter = {};
-      if ("id" in params) {
+      if ("id" in params && parseInt(params.id) > 1) {
         filter = {
           userId: parseInt(params.id),
         };

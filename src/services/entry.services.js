@@ -1,5 +1,6 @@
 const prisma = require("../utils/prisma");
 require("dotenv").config();
+const moment = require('moment');
 const otpGenerator = require('otp-generator');
 const createError = require("http-errors");
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -36,12 +37,13 @@ class entryService {
       await Promise.all(data.map(async (dt) => {
         const entryExist = await prisma.entries.findFirst({
           where: {
-            eventId: parseInt(dt.eventId),
+            raceId: parseInt(dt.raceId),
+            userId: parseInt(dt.userId),
             horseId: parseInt(dt.horseId),
             riderId: parseInt(dt.riderId)
           }
         });
-
+console.log(entryExist,'check')
         if (entryExist) {
           throw new Error("Entry already exists!", 409);
         }
@@ -251,17 +253,32 @@ console.log(_entry)
     }
   }
 
-  static async fetchList(id) {
+  // TODO: export final list, pending list
+  // TODO: logic# lessthan or equal to allowed count = final list
+  // TODO: else pending list
+  static async fetchPdfList(id, type) {
     try {
       let filter = {};
+      let allowedCount = 0;
+      let raceTitle = '';
+      let date = '';
+      let raceCode = '';
       console.log('params0', id)
+      console.log('params1', type)
       // if ('query' in params && params.query !== 'raceId') {
       //   console.log('query', query)
       //   filter = {
       //     ...filter,
       //     raceId: parseInt(query),
       //   };
-      // }
+      if (type) {
+        const race = await prisma.races.findFirst({ where: { id: parseInt(id) }});
+        console.log('rarararace', moment(race.eventDate).format('MMMM Do YYYY, h:mm:ss a'))
+        allowedCount = race.allowedCount;
+        raceTitle = race.name;
+        date = moment(race.eventDate).format('MMMM Do YYYY, h:mm:ss a');
+        raceCode = race.raceCode || 'CEI';
+      }
       if (id) {
         // let user = await prisma.users.findFirst({
         //   where: {
@@ -288,27 +305,44 @@ console.log(_entry)
         // }
       }
 
-      // if ("active" in params) {
-      //   filter = {
-      //     ...filter,
-      //     active: params.active === "true",
-      //   };
-      // }
-
-      console.log("filter", filter);
+      if (type === 'accepted') {
+        filter = {
+          ...filter,
+          // sequence: {
+          //   lte: allowedCount
+          // }
+          status: 'approved'
+        }
+      } else {
+        filter = {
+          ...filter,
+          // sequence: {
+          //   gte: allowedCount
+          // }
+          status: 'pending'
+        }
+      }
 
       const allEntries = await prisma.entries.findMany({
         where: {
           ...filter,
         },
         orderBy: {
-          approvedAt: 'desc',
           sequence: 'asc'
         },
         include: {
-          users: true,
+          users: {
+            include: {
+              stables: true
+            }
+          },
 
-          horses: true,
+          horses: {
+            include: {
+              trainers: true,
+              owners: true,
+            }
+          },
           riders: true,
           races: {
             include: {
@@ -318,7 +352,630 @@ console.log(_entry)
         }
       });
 
-      return allEntries;
+      // console.log('ALL ENTRIES', allEntries)
+      // console.log('ALL ENTRIES', allEntries.length)
+      let entries = allEntries.map((entry, i) => ({
+          SERIES: i+1,
+          STAT: `${(entry.status).toUpperCase()}\nEIEV-${entry.id}`,
+          HORSE: `${entry?.horses?.name} ${entry?.horses?.originalName}\n ${entry?.horses?.feiId} / ${entry?.horses?.eefId} / ${entry?.horses?.countryBirth}`,
+          RIDER: `${entry?.riders?.firstName} ${entry?.riders?.lastName}\n ${entry?.horses?.feiId} / ${entry?.horses?.eefId}`,
+          'CLUB/TRAINER': `${entry?.users?.stables?.name}\n ${entry?.horses?.trainers?.firstName} ${entry?.horses?.trainers?.lastName}\n` ,
+          REMARKS: `TEST${i}`,
+      }));
+      // let entries = [];
+      // if (type === 'accepted') {
+      //   entries = [
+      //     {
+      //       SERIES:'1',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'2',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'3',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'4',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'5',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'6',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'7',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'8',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'9',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'10',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'11',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'12',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'13',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'14',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'15',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'16',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'17',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'18',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'19',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'20',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'21',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'22',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'23',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'24',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'25',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'26',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'M2inotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'27',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'28',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'29',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'30',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'31',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'32',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'33',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'34',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'35',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'36',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'37',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'38',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'39',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },{
+      //       SERIES:'40',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'41',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'42',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'43',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'44',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'45',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'46',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'47',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'48',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'49',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },{
+      //       SERIES:'50',
+      //       STAT: 'ACCEPTED\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'51',
+      //       STAT: 'ACCEPTED\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'52',
+      //       STAT: 'ACCEPTED\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'53',
+      //       STAT: 'ACCEPTED\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'54',
+      //       STAT: 'ACCEPTED\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     }
+      //   ];
+      // } else if (type === 'pending') {
+      //     entries = [{
+      //       SERIES:'1',
+      //       STAT: 'PENDING\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'2',
+      //       STAT: 'PENDING\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'3',
+      //       STAT: 'PENDING\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'4',
+      //       STAT: 'PENDING\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'5',
+      //       STAT: 'PENDING\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },{
+      //       SERIES:'6',
+      //       STAT: 'PENDING\nEIEV-21',
+      //       HORSE: 'Ixion Lambert\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Sameer Shafiq\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'7',
+      //       STAT: 'PENDING\nEIEV-20',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'8',
+      //       STAT: 'PENDING\nEIEV-19',
+      //       HORSE: 'Demacia Celestial Dragon\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Hikmat Abdullah\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'9',
+      //       STAT: 'PENDING\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'10',
+      //       STAT: 'PENDING\nEIEV-22',
+      //       HORSE: 'Minotaur Noxious\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Callie Sewell\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     },
+      //     {
+      //       SERIES:'11',
+      //       STAT: 'PENDING\nEIEV-23',
+      //       HORSE: 'Flash Speed\n EEF-ENDH-0019036 / 104YD41 / UAE',
+      //       RIDER: 'Robert  Buchanan\n EEF-ENDR-0018679 / 10255512',
+      //       'CLUB/TRAINER': 'Al Wathba Stable 2\n Derrick  Johnson\n',
+      //       REMARKS: ''
+      //     }
+      //   ];
+      // }
+
+      console.log(entries)
+
+      return { lists: entries, count: entries.length, title: raceTitle, code: raceCode, date:date };
+    } catch (error) {
+      console.log("error", error);
+    }
+  }
+
+  static async fetchXlsList(id, type) {
+    try {
+      let filter = {};
+      let allowedCount = 0;
+      let raceTitle = '';
+      console.log('params0', id)
+      console.log('params1', type)
+      if (type) {
+        const race = await prisma.races.findFirst({ where: { id: parseInt(id) }});
+        console.log('racrace', race)
+        allowedCount = race.allowedCount;
+        raceTitle = race.name;
+      }
+      if (id) {
+        filter = {
+          ...filter,
+          raceId: parseInt(id),
+        }
+      }
+
+      if (type === 'accepted') {
+        filter = {
+          ...filter,
+          // sequence: {
+          //   lte: allowedCount
+          // }
+          status: 'approved'
+        }
+      } else {
+        filter = {
+          ...filter,
+          // sequence: {
+          //   gt: allowedCount
+          // }
+          status: 'pending'
+        }
+      }
+
+      const allEntries = await prisma.entries.findMany({
+        where: {
+          ...filter,
+        },
+        orderBy: {
+          sequence: 'asc'
+        },
+        include: {
+          users: {
+            include: {
+              stables: true
+            }
+          },
+
+          horses: {
+            include: {
+              trainers: true,
+              owners: true,
+            }
+          },
+          riders: true,
+          races: {
+            include: {
+              events: true
+            }
+          }
+        }
+      });
+
+      // console.log('ALL ENTRIES', allEntries)
+      // console.log('ALL ENTRIES', allEntries.length)
+      let entries = allEntries.map((entry, i) => ({
+          series: i+1,
+          status: `${(entry.status).toUpperCase()}\nEIEV-${entry.id}`,
+          horse: `${entry?.horses?.name} ${entry?.horses?.originalName}\n ${entry?.horses?.feiId} / ${entry?.horses?.eefId} / ${entry?.horses?.countryBirth}`,
+          rider: `${entry?.riders?.firstName} ${entry?.riders?.lastName}\n ${entry?.horses?.feiId} / ${entry?.horses?.eefId}`,
+          stable: entry?.users?.stables?.name,
+          eefFeiHorse: `${entry?.horses?.feiId} / ${entry?.horses?.eefId}`,
+          eefFeiRider: `${entry?.riders?.feiId} / ${entry?.riders?.eefId} / ${entry?.riders?.homeCountry}`,
+          trainer: `${entry?.horses?.trainers?.firstName} ${entry?.horses?.trainers?.lastName}` ,
+      }));
+
+      return { lists: entries, count: entries.length, title: raceTitle };
     } catch (error) {
       console.log("error", error);
     }

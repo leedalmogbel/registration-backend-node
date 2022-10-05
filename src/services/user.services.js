@@ -271,31 +271,30 @@ class userService {
   static async dashboardCategoryCount(params) {
     try {
       let filter = {};
-      if ("id" in params) {
+      if ("id" in params && params.id > 1) {
         filter = {
           userId: parseInt(params.id),
         };
       }
-
-      const [users, owners, trainers, riders, horses, notifications] = await Promise.all([
+console.log('params', params)
+      const [users, owners, trainers, riders, horses] = await Promise.all([
         await prisma.users.count({}),
         await prisma.owners.count({ where: { ...filter } }),
         await prisma.trainers.count({ where: { ...filter } }),
         await prisma.riders.count({ where: { ...filter } }),
         await prisma.horses.count({ where: { ...filter } }),
-        await prisma.notifications.groupBy({ 
-          by: ['type'],
-          where: { senderId: parseInt(params.id) }})
+        // await prisma.notifications.findMany({ 
+        //   where: { userId: parseInt(params.id) }})
       ]);
+
       console.log('where', filter)
-      console.log('notifications', notifications)
+      // console.log('notifications', notifications)
       return {
         users,
         owners,
         trainers,
         riders,
         horses,
-        notifications
       };
     } catch (error) {
       console.log("THIS!!!", error);

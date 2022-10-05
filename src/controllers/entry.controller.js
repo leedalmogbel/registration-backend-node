@@ -2,7 +2,9 @@ const entry = require("../services/entry.services");
 const ticket = require('../services/ticket.services');
 const { Parser } = require('json2csv');
 const createError = require("http-errors");
-const { ip, generateQR } = require("../utils/helpers");
+const { ip, generateQR, generatePdf } = require("../utils/helpers");
+const excel = require("exceljs");
+const path = require('path');
 
 class entryController {
   static store = async (req, res, next) => {
@@ -64,7 +66,6 @@ class entryController {
   };
 
   static manage = async (req, res, next) => {
-    console.log(req.query, 'taetaetae')
     try {
       console.log("req.query", req.query);
       const params = req.query;
@@ -132,6 +133,9 @@ class entryController {
     }
   };
 
+  /**
+   * UPDATE ENTRY LIST SEQUENCE
+   */
   static updateList = async (req, res, next) => {
     try {
       const { id } = req.params;
@@ -153,31 +157,83 @@ class entryController {
     }
   };
 
-  static export = async (req, res, next) => {
+  /**
+   * EXPORT ENTRIES PDF
+   */
+  static exportPdf = async (req, res, next) => {
     try {
-      const { id } = req.params;
-      const fields = ["user", "horse", "rider"]
+      const { id, type } = req.params;
+      // const fields = ["user", "horse", "rider"]
 
-      const list = await entry.fetchList(id);
-      let exportList = {};
-      exportList = list.map((item) => {
-        console.log(item.users.firstName)
-        const fullNameUser = `${item.users.firstName} ${item.users.lastName}`;
-        const fullNameRider = `${item.riders.firstName} ${item.riders.lastName}`;
-        return {
-          user: fullNameUser,
-          horse: item.horses.name,
-          rider: fullNameRider,
-        }
+      const { lists, count, title, code, date } = await entry.fetchPdfList(id, type);
+      // let exportList = {};
+      console.log('raceTitle', title)
+      
+      const pdfList = await generatePdf(lists, count, title, type, code, date);
+      console.log('pdfList', pdfList)
+      // console.log('asdasdasd', docDefinition)
+      
+      // const json2csv = new Parser({ fields: fields });
+      // const csv = json2csv.parse(exportList);
+      // const filename = ['Entries-', Date.now()].join('');
+      
+      // res.set('Content-Disposition', ["attachment; filename=", filename, '.csv'].join(''))
+      // console.log(path.resolve('uploads/pdfs/tables.pdf'))
+      res.set("Content-Type", "application/pdf");
+      // console.log(`localhost:7331/${path.resolve(pdfList)}`)
+      res.status(200).download(path.resolve(pdfList));
+    } catch (error) {
+      console.log(error)
+    }
+  };
+
+  /**
+   * EXPORT ENTRIES PDF
+   */
+  static exportExcel = async (req, res, next) => {
+    try {
+      const { id, type } = req.params;
+      const { lists } = await entry.fetchXlsList(id, type);
+      // const xlsList = await generateXls(lists);
+console.log('lists', lists)
+      let workbook = new excel.Workbook();
+      let worksheet = workbook.addWorksheet('sample');
+      worksheet.columns = [
+        { header: 'SERIES', key: 'series', width: 10 },
+        { header: 'STATUS', key: 'status', width: 10 },
+        { header: 'HORSE', key: 'horse', width: 32 },
+        { header: 'RIDER', key: 'rider', width: 32 },
+        { header: 'STABLE', key: 'stable', width: 32 },
+        { header: 'HORSE FEI EEF', key: 'eefFeiHorse', width: 32 },
+        { header: 'RIDER FEI EEF', key: 'eefFeiRider', width: 32 },
+        { header: 'TRAINER', key: 'trainer', width: 32 },
+      ];
+      lists.forEach((list) => {
+        worksheet.addRow(list);
+      })
+      // worksheet.addRows(lists);
+      // worksheet.commit();
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=" + "sample.xlsx"
+      );
+      
+      // console.log(await workbook.xlsx.write(res))
+      await workbook.xlsx.write(res).then((data) => {
+        res.end();
+        console.log('adadada', data)
       })
 
-      const json2csv = new Parser({ fields: fields });
-      const csv = json2csv.parse(exportList);
-      const filename = ['Entries-', Date.now()].join('');
-      
-      res.set('Content-Disposition', ["attachment; filename=", filename, '.csv'].join(''))
-      res.status(200).send(Buffer.from(csv));
-    } catch (error) {}
+      // res.status(201).download(lists);
+    } catch (error) {
+      console.log(error)
+    }
+
   };
 
   static showRaceEntriesOnKiosk = async (req, res, next) => {
